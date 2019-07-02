@@ -12,29 +12,29 @@
 
 typedef struct
 {
-	char location[MAX_GAME_LOCATION_LENGTH + 1];
-	char name[MAX_GAME_NAME_LENGTH + 1];
+    char location[MAX_GAME_LOCATION_LENGTH + 1];
+    char name[MAX_GAME_NAME_LENGTH + 1];
 } launcher_program_t;
 
 class Menu
 {
-	public:
-		Menu(_TCHAR *inifile);
-		~Menu(void);
+public:
+    Menu(_TCHAR *inifile);
+    ~Menu();
 
-		unsigned int NumberOfEntries() { return num_programs; }
-		char *GetEntryName(unsigned int game) { return settings[game].name; }
-		char *GetEntryPath(unsigned int game) { return settings[game].location; }
+    unsigned int NumberOfEntries() { return num_programs; }
+    char *GetEntryName(unsigned int game) { return settings[game].name; }
+    char *GetEntryPath(unsigned int game) { return settings[game].location; }
 
-		void Tick();
-		void ResetTimeout();
-		bool ShouldBootDefault();
-		unsigned int SecondsLeft();
-	private:
-		unsigned int num_programs;
-		launcher_program_t *settings;
-		struct timeb beginning;
-		struct timeb current;
+    void Tick();
+    void ResetTimeout();
+    bool ShouldBootDefault();
+    unsigned int SecondsLeft();
+private:
+    unsigned int num_programs;
+    launcher_program_t *settings;
+    struct timeb beginning;
+    struct timeb current;
 
-		launcher_program_t *LoadSettings( _TCHAR *ini_file, unsigned int *final_length );
+    launcher_program_t *LoadSettings( _TCHAR *ini_file, unsigned int *final_length );
 };

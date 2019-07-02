@@ -27,30 +27,34 @@
 
 #define TEXT_PADDING 10
 
+#define ANIMATION_SPEED 1000
+
 /* Number of games to display on one screen */
 #define GAMES_PER_PAGE 12
 
 class Display
 {
-	public:
-		Display(HINSTANCE hInstance, IO *ioInst, Menu *mInst);
-		~Display(void);
+public:
+    Display(HINSTANCE hInstance, IO *ioInst, Menu *mInst);
+    ~Display();
 
-		void Tick();
-		bool WasClosed();
+    void Tick();
+    bool WasClosed();
 
-		void ButtonPress(int button);
-		void ButtonRelease(int button);
+    void ButtonPress(int button);
+    void ButtonRelease(int button);
 
-		unsigned int GetSelectedItem();
+    unsigned int GetSelectedItem();
 
-	private:
-		HINSTANCE inst;
-		HWND hwnd;
+private:
+    HINSTANCE inst;
+    HWND hwnd;
 
-		Menu *menu;
-		IO *io;
+    Menu *menu;
+    IO *io;
 
-		unsigned int page;
-		unsigned int selected;
+    int newPage;
+    unsigned int page;
+    unsigned int selected;
+    int lastLocation;
 };

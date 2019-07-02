@@ -34,34 +34,34 @@ typedef int(*INT_RET_THREE_ARGS)(int x, int y, int *out);
 
 class IO
 {
-	public:
-		IO();
-		~IO(void);
+public:
+    IO();
+    ~IO();
 
-		bool Ready();
-		void Tick();
-		void ErrorMessage(char *msg);
-		unsigned int ButtonsHeld();
-		unsigned int ButtonsPressed();
-		bool ButtonHeld(unsigned int button);
-		bool ButtonPressed(unsigned int button);
-	private:
-		HMODULE core;
-		HMODULE device;
+    bool Ready();
+    void Tick();
+    void ErrorMessage(char *msg);
+    unsigned int ButtonsHeld();
+    unsigned int ButtonsPressed();
+    bool ButtonHeld(unsigned int button);
+    bool ButtonPressed(unsigned int button);
+private:
+    HMODULE core;
+    HMODULE device;
 
-		INT_RET_ONE_ARG device_initialize;
-		INT_RET_NO_ARGS device_is_initialized;
-		INT_RET_NO_ARGS device_get_status;
-		INT_RET_ONE_ARG device_set_panel_mode;
-		INT_RET_THREE_ARGS device_get_panel_trg_on;
-		INT_RET_THREE_ARGS device_get_panel_trg_off;
-		INT_RET_THREE_ARGS device_get_panel_trg_short_on;
-		INT_RET_NO_ARGS device_update;
-		INT_RET_NO_ARGS device_finalize;
+    INT_RET_ONE_ARG device_initialize;
+    INT_RET_NO_ARGS device_is_initialized;
+    INT_RET_NO_ARGS device_get_status;
+    INT_RET_ONE_ARG device_set_panel_mode;
+    INT_RET_THREE_ARGS device_get_panel_trg_on;
+    INT_RET_THREE_ARGS device_get_panel_trg_off;
+    INT_RET_THREE_ARGS device_get_panel_trg_short_on;
+    INT_RET_NO_ARGS device_update;
+    INT_RET_NO_ARGS device_finalize;
 
-		log_func log_function;
+    log_func log_function;
 
-		bool is_ready;
-		unsigned int buttons;
-		unsigned int lastButtons;
+    bool is_ready;
+    unsigned int buttons;
+    unsigned int lastButtons;
 };
