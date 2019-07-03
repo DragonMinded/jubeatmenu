@@ -7,7 +7,9 @@ Animation::Animation()
     speed = 0.0;
     lastMilliseconds = 0;
     location = 0.0;
+    speedChangeLocation = 0.0;
     offset = 0;
+    speedChanges = 0;
     isAnimating = false;
 }
 
@@ -24,6 +26,8 @@ void Animation::Animate(int animationOffset, int animationDistance, double pixel
     location = 0.0;
     offset = animationOffset;
     speed = pixelsPerSecond / (1000.0);
+    speedChangeLocation = (double)abs(animationDistance) * SPEED_REDUCE_LOCATION;
+    speedChanges = 0;
     isAnimating = true;
     lastMilliseconds = CurrentMilliseconds();
 }
@@ -58,6 +62,12 @@ void Animation::Tick()
         {
             location = abs(distance);
             isAnimating = false;
+        }
+        else if (location >= speedChangeLocation && speedChanges < MAX_SPEED_CHANGES)
+        {
+            speed *= SPEED_REDUCE_PERCENTAGE;
+            speedChangeLocation = location + (((double)abs(distance) - location) * SPEED_REDUCE_LOCATION);
+            speedChanges ++;
         }
 
         // Remeber we moved
