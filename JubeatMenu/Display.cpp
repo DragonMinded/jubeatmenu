@@ -67,9 +67,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         /* Set up rectangle display */
         HPEN redPen = CreatePen(PS_SOLID, 2, RGB(255,0,0));
         HPEN whitePen = CreatePen(PS_SOLID, 2, RGB(255,255,255));
+        HPEN noPen = CreatePen(PS_NULL, 0, RGB(0, 0, 0));
 
         /* Draw top instructions */
         {
+            SelectObject(hdc, GetStockObject(DC_BRUSH));
+            SetDCBrushColor(hdc, RGB(24,24,24));
+            SelectObject(hdc, noPen);
+            Rectangle(hdc, 0, VIEWPORT_TOP, SCREEN_WIDTH, VIEWPORT_BOTTOM);
+
             RECT rect;
             rect.top = VIEWPORT_TOP + TEXT_PADDING;
             rect.bottom = VIEWPORT_BOTTOM - TEXT_PADDING;
@@ -98,25 +104,28 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             /* Set up background colors */
             SelectObject(hdc, GetStockObject(DC_BRUSH));
-            SetDCBrushColor(hdc, RGB(0,0,0));
-
-            /* Set up border color to show current held buttons */
-            SelectObject(hdc, redPen);
+            SetDCBrushColor(hdc, RGB(24,24,24));
 
             /* Intentionally skip button 16 because pressing it will always
                insta-launch the selected game, so we will never need to show
                a hover square. */
             for( unsigned int position = 0; position < 15; position++ )
             {
+                /* Set up border color to show current held buttons */
                 if (!((globalButtonsHeld >> position) & 1))
                 {
-                    // This button isn't being held, no need to show a held box.
-                    continue;
+                    // Don't show hover when not being pressed
+                    SelectObject(hdc, noPen);
                 }
-                if (globalAnimation->IsAnimating() && position < 12)
+                else if (globalAnimation->IsAnimating() && position < 12)
                 {
                     // Don't show hover while moving selection panels.
-                    continue;
+                    SelectObject(hdc, noPen);
+                }
+                else
+                {
+                    // Held and not animating, show hover.
+                    SelectObject(hdc, redPen);
                 }
 
                 unsigned int xPos = position % 4;
