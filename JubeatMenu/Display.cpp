@@ -24,6 +24,17 @@ static const unsigned int HIGHLIGHT_MAPPING[15] = {
     0, 1, 2, 3, 16, 4, 5, 6, 7, 16, 8, 9, 10, 11, 16
 };
 
+void MessageHandler()
+{
+    /* Handle windows message pump */
+    MSG msg = { };
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
@@ -39,8 +50,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_QUIT:
         globalQuit = true;
         return 0;
-    case WM_ERASEBKGND:
-        return 1;
     case WM_PAINT:
         /* Grab the maximum number of menu items */
         unsigned int maxEntries = globalMenu->NumberOfEntries();
@@ -65,8 +74,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         HFONT hArrowFont = CreateFont(ARROW_FONT_SIZE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, L"Verdana");
 
         /* Set up rectangle display */
-        HPEN redPen = CreatePen(PS_SOLID, 2, RGB(255,0,0));
-        HPEN whitePen = CreatePen(PS_SOLID, 2, RGB(255,255,255));
+        HPEN redPen = CreatePen(PS_SOLID | PS_INSIDEFRAME, 2, RGB(255,0,0));
+        HPEN whitePen = CreatePen(PS_SOLID | PS_INSIDEFRAME, 2, RGB(255,255,255));
         HPEN noPen = CreatePen(PS_NULL, 0, RGB(0, 0, 0));
 
         /* Draw top instructions */
@@ -74,7 +83,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc, GetStockObject(DC_BRUSH));
             SetDCBrushColor(hdc, RGB(24,24,24));
             SelectObject(hdc, noPen);
-            Rectangle(hdc, 0, VIEWPORT_TOP, SCREEN_WIDTH, VIEWPORT_BOTTOM);
+            Rectangle(hdc, 0, VIEWPORT_TOP, SCREEN_WIDTH + 1, VIEWPORT_BOTTOM + 1);
 
             RECT rect;
             rect.top = VIEWPORT_TOP + TEXT_PADDING;
@@ -109,17 +118,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             /* Intentionally skip button 16 because pressing it will always
                insta-launch the selected game, so we will never need to show
                a hover square. */
-            for( unsigned int position = 0; position < 15; position++ )
+            for( unsigned int position = 12; position < 15; position++ )
             {
                 /* Set up border color to show current held buttons */
                 if (!((globalButtonsHeld >> position) & 1))
                 {
                     // Don't show hover when not being pressed
-                    SelectObject(hdc, noPen);
-                }
-                else if (globalAnimation->IsAnimating() && position < 12)
-                {
-                    // Don't show hover while moving selection panels.
                     SelectObject(hdc, noPen);
                 }
                 else
@@ -186,7 +190,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             {
                 unsigned int top = BUTTON_TOP + (BUTTON_VERTICAL_STRIDE * 3) + 1;
                 unsigned int bottom = top + BUTTON_WIDTH;
-                unsigned int left = BUTTON_LEFT + (BUTTON_HORIZONTAL_STRIDE * 0) + 1;
+                unsigned int left = BUTTON_LEFT;
                 unsigned int right = left + BUTTON_HEIGHT;
 
                 if ((globalButtonsHeld >> 12) & 1)
@@ -220,7 +224,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             {
                 unsigned int top = BUTTON_TOP + (BUTTON_VERTICAL_STRIDE * 3) + 1;
                 unsigned int bottom = top + BUTTON_WIDTH;
-                unsigned int left = BUTTON_LEFT + (BUTTON_HORIZONTAL_STRIDE * 1) + 1;
+                unsigned int left = BUTTON_LEFT + BUTTON_HORIZONTAL_STRIDE;
                 unsigned int right = left + BUTTON_HEIGHT;
 
                 if ((globalButtonsHeld >> 13) & 1)
@@ -259,7 +263,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             /* Look up the actual item at this position */
             unsigned int item = DRAW_MAPPING[position] + (globalPage * 3);
-            if (item >= maxEntries) { continue; }
 
             /* There is an extra pixel of bump for the second half of the squares */
             unsigned int xBump = xPos >= 2 ? 1 : 0;
@@ -293,6 +296,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             {
                 SelectObject(hdc, redPen);
             }
+            else if (item >= maxEntries)
+            {
+                SelectObject(hdc, noPen);
+            }
             else
             {
                 SelectObject(hdc, whitePen);
@@ -300,6 +307,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             // Draw bounding rectangle
             Rectangle(hdc, left, top, right, bottom);
+            if (item >= maxEntries) { continue; }
 
             // Draw text
             RECT rect;
@@ -313,6 +321,22 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc, hItemFont);
             DrawText(hdc, wString, -1, &rect, DT_HIDEPREFIX | DT_CENTER | DT_TOP | DT_WORDBREAK);
             delete wString;
+        }
+
+        /* Finally, draw black bars around sections that shouldn't have graphics. */
+        {
+            SelectObject(hdc, GetStockObject(DC_BRUSH));
+            SetDCBrushColor(hdc, RGB(0,0,0));
+            SelectObject(hdc, noPen);
+
+            /* Outside edges */
+            Rectangle(hdc, 0, BUTTON_TOP, BUTTON_LEFT, SCREEN_HEIGHT + 1);
+            Rectangle(hdc, BUTTON_LEFT + (BUTTON_HORIZONTAL_STRIDE * 3) + BUTTON_WIDTH + 1, BUTTON_TOP, SCREEN_WIDTH + 1, SCREEN_HEIGHT + 1);
+
+            /* In between buttons */
+            Rectangle(hdc, BUTTON_LEFT + BUTTON_WIDTH, BUTTON_TOP, BUTTON_LEFT + BUTTON_HORIZONTAL_STRIDE, SCREEN_HEIGHT + 1);
+            Rectangle(hdc, BUTTON_LEFT + BUTTON_HORIZONTAL_STRIDE + BUTTON_WIDTH, BUTTON_TOP, BUTTON_LEFT + (BUTTON_HORIZONTAL_STRIDE * 2) + 1, SCREEN_HEIGHT + 1);
+            Rectangle(hdc, BUTTON_LEFT + (BUTTON_HORIZONTAL_STRIDE * 2) + BUTTON_WIDTH + 1, BUTTON_TOP, BUTTON_LEFT + (BUTTON_HORIZONTAL_STRIDE * 3) + 1, SCREEN_HEIGHT + 1);
         }
 
         DeleteObject(hItemFont);
@@ -383,14 +407,6 @@ Display::~Display()
 
 void Display::Tick(void)
 {
-    /* Handle windows message pump */
-    MSG msg = { };
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
     /* Don't handle input while animating */
     unsigned int buttonsHeld = io->ButtonsHeld();
     globalAnimation->Tick();
@@ -403,10 +419,14 @@ void Display::Tick(void)
             globalButtonsHeld = buttonsHeld;
             update = true;
         }
-
         if (lastLocation != globalAnimation->Position())
         {
             lastLocation = globalAnimation->Position();
+            update = true;
+        }
+        if (globalSeconds != menu->SecondsLeft())
+        {
+            globalSeconds = menu->SecondsLeft();
             update = true;
         }
 
@@ -415,6 +435,8 @@ void Display::Tick(void)
             InvalidateRect(hwnd, NULL, FALSE);
             UpdateWindow(hwnd);
         }
+
+        MessageHandler();
         return;
     }
 
@@ -427,6 +449,8 @@ void Display::Tick(void)
         globalButtonsHeld = buttonsHeld;
         InvalidateRect(hwnd, NULL, FALSE);
         UpdateWindow(hwnd);
+
+        MessageHandler();
         return;
     }
 
@@ -457,6 +481,7 @@ void Display::Tick(void)
                 globalAnimation->Animate(-BUTTON_HORIZONTAL_STRIDE, BUTTON_HORIZONTAL_STRIDE, ANIMATION_SPEED);
                 lastLocation = globalAnimation->Position();
                 page--;
+                newPage = page;
                 moved = true;
             }
         }
@@ -494,7 +519,8 @@ void Display::Tick(void)
         globalPage = page;
         update = true;
     }
-    if (globalSeconds != menu->SecondsLeft()) {
+    if (globalSeconds != menu->SecondsLeft())
+    {
         globalSeconds = menu->SecondsLeft();
         update = true;
     }
@@ -504,6 +530,8 @@ void Display::Tick(void)
         InvalidateRect(hwnd, NULL, FALSE);
         UpdateWindow(hwnd);
     }
+
+    MessageHandler();
 }
 
 bool Display::WasClosed()
