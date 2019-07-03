@@ -47,6 +47,8 @@ public:
     unsigned int GetSelectedItem();
 
 private:
+    void InvalidateOnUpdates();
+
     HINSTANCE inst;
     HWND hwnd;
 
@@ -57,4 +59,6 @@ private:
     unsigned int page;
     unsigned int selected;
     int lastLocation;
+    unsigned int leftPresses;
+    unsigned int rightPresses;
 };

@@ -368,6 +368,8 @@ Display::Display(HINSTANCE hInstance, IO *ioInst, Menu *mInst)
     selected = 0;
     newPage = -1;
     lastLocation = 0;
+    leftPresses = 0;
+    rightPresses = 0;
 
     // Register the callback
     WNDCLASS wc = { };
@@ -405,37 +407,74 @@ Display::~Display()
     delete globalAnimation;
 }
 
+void Display::InvalidateOnUpdates()
+{
+    unsigned int buttonsHeld = io->ButtonsHeld();
+    bool update = false;
+
+    if (globalButtonsHeld != buttonsHeld)
+    {
+        globalButtonsHeld = buttonsHeld;
+        update = true;
+    }
+    if (globalSelected != selected)
+    {
+        globalSelected = selected;
+        update = true;
+    }
+    if (lastLocation != globalAnimation->Position())
+    {
+        lastLocation = globalAnimation->Position();
+        update = true;
+    }
+    if (globalPage != page)
+    {
+        globalPage = page;
+        update = true;
+    }
+    if (globalSeconds != menu->SecondsLeft())
+    {
+        globalSeconds = menu->SecondsLeft();
+        update = true;
+    }
+
+    if (update)
+    {
+        InvalidateRect(hwnd, NULL, FALSE);
+        UpdateWindow(hwnd);
+    }
+}
+
 void Display::Tick(void)
 {
-    /* Don't handle input while animating */
-    unsigned int buttonsHeld = io->ButtonsHeld();
+    /* Make sure animations happen */
     globalAnimation->Tick();
+
+    /* Make sure we respect multiple inputs while animating */
+    unsigned int max_pages = ((menu->NumberOfEntries() - GAMES_PER_PAGE) + 2) / 3;
+    if (io->ButtonPressed(BUTTON_13))
+    {
+        leftPresses ++;
+        if (page < (max_pages - 1))
+        {
+            /* We're not at the last page, so quick-scroll the current animation */
+            globalAnimation->CancelDeceleration();
+        }
+    }
+    if (io->ButtonPressed(BUTTON_14))
+    {
+        rightPresses ++;
+        if (page > 0)
+        {
+            /* We're not at the last page, so quick-scroll the current animation */
+            globalAnimation->CancelDeceleration();
+        }
+    }
+
+    /* Don't handle game select input while animating */
     if (globalAnimation->IsAnimating())
     {
-        bool update = false;
-
-        if (globalButtonsHeld != buttonsHeld)
-        {
-            globalButtonsHeld = buttonsHeld;
-            update = true;
-        }
-        if (lastLocation != globalAnimation->Position())
-        {
-            lastLocation = globalAnimation->Position();
-            update = true;
-        }
-        if (globalSeconds != menu->SecondsLeft())
-        {
-            globalSeconds = menu->SecondsLeft();
-            update = true;
-        }
-
-        if (update)
-        {
-            InvalidateRect(hwnd, NULL, FALSE);
-            UpdateWindow(hwnd);
-        }
-
+        InvalidateOnUpdates();
         MessageHandler();
         return;
     }
@@ -444,12 +483,9 @@ void Display::Tick(void)
     if (newPage >= 0)
     {
         page = newPage;
-        globalPage = page;
         newPage = -1;
-        globalButtonsHeld = buttonsHeld;
-        InvalidateRect(hwnd, NULL, FALSE);
-        UpdateWindow(hwnd);
 
+        InvalidateOnUpdates();
         MessageHandler();
         return;
     }
@@ -460,25 +496,46 @@ void Display::Tick(void)
     /* Figure out actions */
     if (menu->NumberOfEntries() > GAMES_PER_PAGE)
     {
-        unsigned int max_pages = ((menu->NumberOfEntries() - GAMES_PER_PAGE) + 2) / 3;
-
         /* Activate page left/right buttons */
-        if (io->ButtonPressed(BUTTON_13))
+        if (leftPresses > 0)
         {
             /* Scroll left */
+            if (page < (max_pages - 1))
+            {
+                /* We have more pages we can animate scrolling to */
+                leftPresses --;
+            }
+            else
+            {
+                /* Next page is the end, we should decelerate */
+                leftPresses = 0;
+            }
+
             if (page < max_pages)
             {
-                globalAnimation->Animate(0, -BUTTON_HORIZONTAL_STRIDE, ANIMATION_SPEED);
+                globalAnimation->Animate(0, -BUTTON_HORIZONTAL_STRIDE, ANIMATION_SPEED, leftPresses == 0);
                 lastLocation = globalAnimation->Position();
                 newPage = page + 1;
                 moved = true;
             }
-        } else if (io->ButtonPressed(BUTTON_14))
+        }
+        else if (rightPresses > 0)
         {
             /* Scroll right */
+            if (page > 1)
+            {
+                /* We have more pages we can animate scrolling to */
+                rightPresses --;
+            }
+            else
+            {
+                /* Next page is the end, we should decelerate */
+                rightPresses = 0;
+            }
+
             if (page > 0)
             {
-                globalAnimation->Animate(-BUTTON_HORIZONTAL_STRIDE, BUTTON_HORIZONTAL_STRIDE, ANIMATION_SPEED);
+                globalAnimation->Animate(-BUTTON_HORIZONTAL_STRIDE, BUTTON_HORIZONTAL_STRIDE, ANIMATION_SPEED, rightPresses == 0);
                 lastLocation = globalAnimation->Position();
                 page--;
                 newPage = page;
@@ -503,34 +560,7 @@ void Display::Tick(void)
 
     /* Update the screen to show any button presses or selection
     changes. */
-    bool update = false;
-    if (globalButtonsHeld != buttonsHeld)
-    {
-        globalButtonsHeld = buttonsHeld;
-        update = true;
-    }
-    if (globalSelected != selected)
-    {
-        globalSelected = selected;
-        update = true;
-    }
-    if (globalPage != page)
-    {
-        globalPage = page;
-        update = true;
-    }
-    if (globalSeconds != menu->SecondsLeft())
-    {
-        globalSeconds = menu->SecondsLeft();
-        update = true;
-    }
-
-    if (update)
-    {
-        InvalidateRect(hwnd, NULL, FALSE);
-        UpdateWindow(hwnd);
-    }
-
+    InvalidateOnUpdates();
     MessageHandler();
 }
 

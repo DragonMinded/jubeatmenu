@@ -10,7 +10,8 @@ public:
     Animation();
     ~Animation();
 
-    void Animate(int animationOffset, int animationDistance, double pixelsPerSecond);
+    void Animate(int animationOffset, int animationDistance, double pixelsPerSecond, bool allowDeceleration);
+    void CancelDeceleration();
     bool IsAnimating();
     void Tick();
     int Position();
@@ -24,5 +25,6 @@ private:
     int speedChanges;
     int offset;
     double speed;
+    double originalSpeed;
     LONG lastMilliseconds;
 };

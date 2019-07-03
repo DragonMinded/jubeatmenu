@@ -18,7 +18,7 @@ Animation::~Animation()
     // Empty
 }
 
-void Animation::Animate(int animationOffset, int animationDistance, double pixelsPerSecond)
+void Animation::Animate(int animationOffset, int animationDistance, double pixelsPerSecond, bool allowDeceleration)
 {
     if (isAnimating) { return; }
 
@@ -26,8 +26,9 @@ void Animation::Animate(int animationOffset, int animationDistance, double pixel
     location = 0.0;
     offset = animationOffset;
     speed = pixelsPerSecond / (1000.0);
+    originalSpeed = speed;
     speedChangeLocation = (double)abs(animationDistance) * SPEED_REDUCE_LOCATION;
-    speedChanges = 0;
+    speedChanges = allowDeceleration ? 0 : MAX_SPEED_CHANGES;
     isAnimating = true;
     lastMilliseconds = CurrentMilliseconds();
 }
@@ -35,6 +36,14 @@ void Animation::Animate(int animationOffset, int animationDistance, double pixel
 bool Animation::IsAnimating()
 {
     return isAnimating;
+}
+
+void Animation::CancelDeceleration()
+{
+    if (!isAnimating) { return; }
+
+    speed = originalSpeed;
+    speedChanges = MAX_SPEED_CHANGES;
 }
 
 int Animation::Position()
@@ -54,8 +63,15 @@ LONG Animation::CurrentMilliseconds()
 void Animation::Tick()
 {
     LONG currentMilliseconds = CurrentMilliseconds();
-    if (currentMilliseconds - lastMilliseconds > 0)
+    if (currentMilliseconds - lastMilliseconds != 0)
     {
+        if (currentMilliseconds - lastMilliseconds < 0)
+        {
+            // We went backwards?
+            lastMilliseconds = currentMilliseconds;
+            return;
+        }
+
         // Calculate how much we should have moved
         location += speed * (double)(currentMilliseconds - lastMilliseconds);
         if (location >= abs(distance))
