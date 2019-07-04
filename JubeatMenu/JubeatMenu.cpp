@@ -100,13 +100,31 @@ extern "C" __declspec(dllexport) int __cdecl dll_entry_init(int a1, int a2)
 
     if (path != NULL)
     {
-        /* Launch actual game */
-        system(path);
+        /* Crate a batch file that launches the game after we exit */
+        char tempPath[1024];
+        GetTempPathA(1024, tempPath);
+        strncat_s(tempPath, 1024, "/launch.bat", 11);
+        HANDLE hBat = CreateFileA(tempPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+        char command[MAX_GAME_LOCATION_LENGTH + 128];
+        sprintf_s(command, MAX_GAME_LOCATION_LENGTH + 128, "ping 127.0.0.1 -n 5 -w 1000 > nul\r\n%s\r\n", path);
+        DWORD bytesWritten;
+        WriteFile(hBat, command, strlen(command), &bytesWritten, NULL);
+        CloseHandle(hBat);
+
+        wchar_t* wCommand = new wchar_t[4096];
+        MultiByteToWideChar(CP_ACP, 0, tempPath, -1, wCommand, 4096);
+
+        STARTUPINFO info={sizeof(info)};
+        PROCESS_INFORMATION processInfo;
+        CreateProcess(NULL, wCommand, NULL, NULL, FALSE, 0, NULL, NULL, &info, &processInfo);
+
+        delete wCommand;
     }
 
     // Return failure so launcher.exe doesn't attempt to
     // further initialize other threads such as the net thread.
-    ExitProcess(0);
+    TerminateProcess(GetCurrentProcess(), 0);
     return 0;
 }
 
