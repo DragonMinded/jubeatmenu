@@ -35,6 +35,30 @@ void MessageHandler()
     }
 }
 
+void DrawCenteredText(HDC hdc, RECT rect, wchar_t *text)
+{
+    /* Save original specs */
+    int top = rect.top;
+    int bottom = rect.bottom;
+    int left = rect.left;
+    int right = rect.right;
+
+    /* Draw text, get the height, clip it, and then later draw a rectangle over it to erase. */
+    int buttonHeight = bottom - top + 1;
+    int textHeight = DrawText(hdc, text, -1, &rect, DT_HIDEPREFIX | DT_WORDBREAK | DT_CALCRECT);
+    if (textHeight > buttonHeight)
+    {
+        textHeight = buttonHeight;
+    }
+
+    /* Now, draw text vertically centered in rectangle */
+    rect.top = top + (buttonHeight - textHeight) / 2;
+    rect.bottom = bottom;
+    rect.left = left;
+    rect.right = right;
+    DrawText(hdc, text, -1, &rect, DT_HIDEPREFIX | DT_CENTER | DT_TOP | DT_WORDBREAK);
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
@@ -173,7 +197,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             wchar_t* wString = new wchar_t[4096];
             MultiByteToWideChar(CP_ACP, 0, start_text, -1, wString, 4096);
             SelectObject(hdc, hItemFont);
-            DrawText(hdc, wString, -1, &rect, DT_HIDEPREFIX | DT_CENTER | DT_TOP);
+            DrawCenteredText(hdc, rect, wString);
             delete wString;
         }
 
@@ -305,11 +329,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 SelectObject(hdc, whitePen);
             }
 
-            // Draw bounding rectangle
+            /* Draw bounding rectangle */
             Rectangle(hdc, left, top, right, bottom);
             if (item >= maxEntries) { continue; }
 
-            // Draw text
+            /* Draw text */
             RECT rect;
             rect.top = top + TEXT_PADDING;
             rect.bottom = bottom - TEXT_PADDING;
@@ -319,7 +343,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             wchar_t* wString = new wchar_t[4096];
             MultiByteToWideChar(CP_ACP, 0, globalMenu->GetEntryName(item), -1, wString, 4096);
             SelectObject(hdc, hItemFont);
-            DrawText(hdc, wString, -1, &rect, DT_HIDEPREFIX | DT_CENTER | DT_TOP | DT_WORDBREAK);
+            DrawCenteredText(hdc, rect, wString);
             delete wString;
         }
 
